@@ -15,4 +15,3 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'attendance_system_facial_recogn
 
 application = get_wsgi_application()
 
-app = application
