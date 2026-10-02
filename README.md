@@ -5,6 +5,14 @@ webcam. Administrators register students, capture their photos and train a
 classifier; students check in and out at a kiosk and can view their own
 attendance history.
 
+## Where it runs
+
+The app runs **locally**, on the machine the webcam is plugged into: check-in,
+check-out and "Add photos" open the camera on the server and show its feed in
+a window. Serverless hosts such as Vercel have no camera and cannot fit the
+face-recognition libraries, so automatic Vercel deployments are switched off
+in `vercel.json`.
+
 ## Requirements
 
 - Python **3.10 or newer**
