@@ -142,6 +142,49 @@ class FaceStoreTests(TestCase):
         self.assertIn("nobody", err.getvalue())
 
 
+class ClassifierPredictTests(TestCase):
+    """Classifier.predict with the face encoder stubbed out."""
+
+    def setUp(self):
+        from sklearn.preprocessing import LabelEncoder
+        from sklearn.svm import SVC
+        import numpy as np
+
+        rng = np.random.default_rng(0)
+        self.alice_center, self.bob_center = np.zeros(128), np.full(128, 0.1)
+        X = np.vstack([self.alice_center + rng.normal(0, 0.01, (10, 128)),
+                       self.bob_center + rng.normal(0, 0.01, (10, 128))])
+        labels = ["alice"] * 10 + ["bob"] * 10
+        encoder = LabelEncoder().fit(labels)
+        y = encoder.transform(labels)
+        self.classifier = face_engine.Classifier(
+            svc=SVC(kernel="linear", probability=True).fit(X, y), encoder=encoder, encodings=X, labels=y
+        )
+
+    def predict(self, encoding):
+        with mock.patch.object(face_engine.face_recognition, "face_locations", return_value=[(0, 1, 1, 0)]), \
+                mock.patch.object(face_engine.face_recognition, "face_encodings", return_value=[encoding]):
+            return self.classifier.predict(None, threshold=0.7, max_distance=0.6)
+
+    def test_known_face_is_matched(self):
+        self.assertEqual(self.predict(self.alice_center)[0], "alice")
+        self.assertEqual(self.predict(self.bob_center)[0], "bob")
+
+    def test_stranger_is_rejected_even_when_svc_is_confident(self):
+        stranger = self.bob_center + 0.2  # far beyond both students, but on bob's side
+        self.assertIsNone(self.predict(stranger)[0])
+
+    def test_no_face_found(self):
+        with mock.patch.object(face_engine.face_recognition, "face_locations", return_value=[]), \
+                mock.patch.object(face_engine.face_recognition, "face_encodings", return_value=[]):
+            self.assertEqual(self.classifier.predict(None, 0.7, 0.6), (None, 0.0))
+
+    def test_missing_model_raises(self):
+        with tempfile.TemporaryDirectory() as tmp, override_settings(FACE_DATA_DIR=Path(tmp)):
+            with self.assertRaises(face_engine.ModelNotTrainedError):
+                face_engine.Classifier.load()
+
+
 class FormTests(TestCase):
     def test_date_range_must_be_ordered(self):
         form = DateRangeForm({"date_from": "2026-09-10", "date_to": "2026-09-01"})

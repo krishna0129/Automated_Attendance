@@ -20,12 +20,10 @@ import cv2
 import dlib
 import face_recognition
 import face_recognition_models
-import imutils
 import joblib
 import numpy as np
 from django.conf import settings
 from django.contrib.auth.models import User
-from imutils.face_utils import FaceAligner, rect_to_bb
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
@@ -37,6 +35,11 @@ logger = logging.getLogger(__name__)
 
 FRAME_WIDTH = 800
 ALIGNED_FACE_WIDTH = 96
+# Where the eyes should land in the aligned crop, as fractions of its width.
+ALIGNED_LEFT_EYE = (0.35, 0.35)
+# 68-point landmark indices (from the subject's point of view).
+RIGHT_EYE_POINTS = slice(36, 42)
+LEFT_EYE_POINTS = slice(42, 48)
 GREEN = (0, 255, 0)
 QUIT_KEY = ord("q")
 
@@ -76,41 +79,85 @@ def _detector():
 
 
 @lru_cache(maxsize=1)
-def _aligner() -> FaceAligner:
+def _landmark_predictor():
     local = Path(settings.FACE_DATA_DIR) / "shape_predictor_68_face_landmarks.dat"
     # Fall back to the copy bundled with the face_recognition_models package.
     path = local if local.exists() else Path(face_recognition_models.pose_predictor_model_location())
-    return FaceAligner(dlib.shape_predictor(str(path)), desiredFaceWidth=ALIGNED_FACE_WIDTH)
+    return dlib.shape_predictor(str(path))
+
+
+def align_face(frame: np.ndarray, gray: np.ndarray, rect) -> np.ndarray:
+    """
+    Rotate and scale ``frame`` so the eyes are level and at fixed positions,
+    then crop a square ALIGNED_FACE_WIDTH face image.
+    """
+    shape = _landmark_predictor()(gray, rect)
+    points = np.array([(p.x, p.y) for p in shape.parts()], dtype=np.float64)
+    # Integer eye centres, as imutils' FaceAligner computed them, so new photos
+    # match ones captured by earlier versions.
+    left_eye = points[LEFT_EYE_POINTS].mean(axis=0).astype(int)
+    right_eye = points[RIGHT_EYE_POINTS].mean(axis=0).astype(int)
+
+    dx, dy = right_eye - left_eye
+    angle = float(np.degrees(np.arctan2(dy, dx))) - 180
+    desired_distance = (1.0 - 2 * ALIGNED_LEFT_EYE[0]) * ALIGNED_FACE_WIDTH
+    scale = desired_distance / max(float(np.hypot(dx, dy)), 1e-6)
+    eyes_center = (float((left_eye[0] + right_eye[0]) // 2), float((left_eye[1] + right_eye[1]) // 2))
+
+    matrix = cv2.getRotationMatrix2D(eyes_center, angle, scale)
+    matrix[0, 2] += ALIGNED_FACE_WIDTH * 0.5 - eyes_center[0]
+    matrix[1, 2] += ALIGNED_FACE_WIDTH * ALIGNED_LEFT_EYE[1] - eyes_center[1]
+    size = (ALIGNED_FACE_WIDTH, ALIGNED_FACE_WIDTH)
+    return cv2.warpAffine(frame, matrix, size, flags=cv2.INTER_CUBIC)
+
+
+def _resize_to_width(frame: np.ndarray, width: int) -> np.ndarray:
+    height = round(frame.shape[0] * width / frame.shape[1])
+    return cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
 
 
 @dataclass
 class Classifier:
     svc: SVC
     encoder: LabelEncoder
+    # Training encodings and their encoded labels, used to reject strangers.
+    encodings: np.ndarray
+    labels: np.ndarray
 
     @classmethod
     def load(cls) -> Classifier:
         path = classifier_path()
         if not path.exists():
             raise ModelNotTrainedError("The recognition model has not been trained yet. Ask an administrator to train it.")
-        data = joblib.load(path)
-        return cls(svc=data["svc"], encoder=data["encoder"])
+        return cls(**joblib.load(path))
 
     def save(self) -> None:
         path = classifier_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump({"svc": self.svc, "encoder": self.encoder}, path)
+        joblib.dump(
+            {"svc": self.svc, "encoder": self.encoder, "encodings": self.encodings, "labels": self.labels}, path
+        )
 
-    def predict(self, face: np.ndarray, threshold: float) -> tuple[str | None, float]:
-        """Return (username, probability), or (None, probability) if no confident match."""
+    def predict(self, face: np.ndarray, threshold: float, max_distance: float) -> tuple[str | None, float]:
+        """
+        Return (username, probability), or (None, probability) if there is no confident match.
+
+        The SVC always picks *some* student, so a match also requires the face to
+        be within ``max_distance`` of one of that student's training photos;
+        otherwise strangers would be marked as whoever they resemble most.
+        """
         encodings = face_recognition.face_encodings(face, known_face_locations=face_recognition.face_locations(face))
         if not encodings:
             return None, 0.0
         probabilities = self.svc.predict_proba(encodings[:1])[0]
         best = int(np.argmax(probabilities))
-        if probabilities[best] <= threshold:
-            return None, float(probabilities[best])
-        return str(self.encoder.inverse_transform([best])[0]), float(probabilities[best])
+        probability = float(probabilities[best])
+        if probability <= threshold:
+            return None, probability
+        nearest = np.linalg.norm(self.encodings[self.labels == best] - encodings[0], axis=1).min()
+        if nearest > max_distance:
+            return None, probability
+        return str(self.encoder.inverse_transform([best])[0]), probability
 
 
 # ---------------------------------------------------------------------------
@@ -142,10 +189,13 @@ def camera_window(title: str) -> Iterator[Iterator[tuple[np.ndarray, list[Detect
             ok, frame = capture.read()
             if not ok:
                 raise CameraError("Lost the camera feed.")
-            frame = imutils.resize(frame, width=FRAME_WIDTH)
+            frame = _resize_to_width(frame, FRAME_WIDTH)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = [
-                DetectedFace(box=rect_to_bb(rect), aligned=_aligner().align(frame, gray, rect))
+                DetectedFace(
+                    box=(rect.left(), rect.top(), rect.width(), rect.height()),
+                    aligned=align_face(frame, gray, rect),
+                )
                 for rect in _detector()(gray, 0)
             ]
             yield frame, faces
@@ -205,13 +255,14 @@ def recognise_faces(window_title: str) -> set[str]:
     """
     classifier = Classifier.load()
     threshold = _config("MATCH_THRESHOLD")
+    max_distance = _config("MAX_DISTANCE")
     min_hits = _config("MIN_HITS")
     hits: Counter[str] = Counter()
 
     with camera_window(f"{window_title} - press q when done") as frames:
         for frame, faces in frames:
             for face in faces:
-                username, probability = classifier.predict(face.aligned, threshold)
+                username, probability = classifier.predict(face.aligned, threshold, max_distance)
                 if username is None:
                     _label(frame, face, "unknown")
                     continue
@@ -258,8 +309,9 @@ def train_classifier(store: FaceImageStore) -> TrainingResult:
 
     X = np.array(encodings)
     encoder = LabelEncoder().fit(labels)
-    svc = SVC(kernel="linear", probability=True).fit(X, encoder.transform(labels))
-    Classifier(svc=svc, encoder=encoder).save()
+    y = encoder.transform(labels)
+    svc = SVC(kernel="linear", probability=True).fit(X, y)
+    Classifier(svc=svc, encoder=encoder, encodings=X, labels=y).save()
 
     perplexity = min(30.0, len(X) - 1.0)
     embedded = TSNE(n_components=2, perplexity=perplexity, init="pca", random_state=0).fit_transform(X)

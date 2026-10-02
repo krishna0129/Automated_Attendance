@@ -153,6 +153,10 @@ FACE_RECOGNITION = {
     "SAMPLES_PER_USER": int(os.environ.get("FACE_SAMPLES_PER_USER", "300")),
     # Minimum classifier probability to accept a match.
     "MATCH_THRESHOLD": float(os.environ.get("FACE_MATCH_THRESHOLD", "0.7")),
+    # Maximum face-encoding distance to the matched student's training photos.
+    # Faces further than this are treated as strangers (0.6 is the
+    # face_recognition library's standard tolerance; lower is stricter).
+    "MAX_DISTANCE": float(os.environ.get("FACE_MAX_DISTANCE", "0.6")),
     # Frames a person must be recognised in before they are marked.
     "MIN_HITS": int(os.environ.get("FACE_MIN_HITS", "3")),
 }

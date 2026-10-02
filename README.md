@@ -101,6 +101,7 @@ Every setting comes from environment variables or a `.env` file; see
 | `FACE_IMAGE_STORAGE`     | `filesystem`        | `filesystem` or `database`                  |
 | `FACE_DATA_DIR`          | `face_recognition_data/` | Classifier and on-disk photos          |
 | `FACE_MATCH_THRESHOLD`   | `0.7`               | Minimum classifier confidence for a match   |
+| `FACE_MAX_DISTANCE`    | `0.6`               | Max distance to a student's photos; rejects strangers |
 | `FACE_MIN_HITS`          | `3`                 | Frames a face must be matched in to count   |
 | `FACE_SAMPLES_PER_USER`  | `300`               | Photos captured by **Add photos**           |
 | `FACE_CAMERA_INDEX`      | `0`                 | OpenCV camera index                         |
