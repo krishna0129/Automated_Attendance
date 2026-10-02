@@ -1,0 +1,7 @@
+{% with name=request.resolver_match.url_name %}
+<ul class="nav nav-pills mt-4">
+  <li class="nav-item"><a class="nav-link {% if name == 'view-attendance-home' %}active{% endif %}" href="{% url 'view-attendance-home' %}"><i class="bi bi-speedometer2"></i> Overview</a></li>
+  <li class="nav-item"><a class="nav-link {% if name == 'view-attendance-employee' %}active{% endif %}" href="{% url 'view-attendance-employee' %}"><i class="bi bi-person"></i> By student</a></li>
+  <li class="nav-item"><a class="nav-link {% if name == 'view-attendance-date' %}active{% endif %}" href="{% url 'view-attendance-date' %}"><i class="bi bi-calendar3"></i> By date</a></li>
+</ul>
+{% endwith %}

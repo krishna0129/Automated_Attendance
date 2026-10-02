@@ -1,0 +1,95 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>{% block title %}Attendance{% endblock %} · GITAM Face Attendance</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{% static 'recognition/css/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-md app-nav">
+    <div class="container">
+      <a class="navbar-brand" href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'home' %}{% endif %}">
+        <img class="brand-logo" src="{% static 'recognition/img/GITAM_logo.png' %}" alt="GITAM">
+        <span class="brand-divider"></span>
+        <span class="brand-text">Face Attendance<small>Recognition-based attendance</small></span>
+      </a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="bi bi-list" style="font-size: 1.5rem;"></i>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ml-auto align-items-md-center">
+          {% block nav_links %}
+            {% if user.is_authenticated %}
+              <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a></li>
+              {% if user.is_staff %}
+                <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name|slice:':15' == 'view-attendance' %}active{% endif %}" href="{% url 'view-attendance-home' %}">Reports</a></li>
+              {% else %}
+                <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'view-my-attendance-employee-login' %}active{% endif %}" href="{% url 'view-my-attendance-employee-login' %}">My Attendance</a></li>
+              {% endif %}
+              <li class="nav-item ml-md-3">
+                <span class="user-chip"><span class="avatar">{{ user.username|slice:':1' }}</span>{{ user.username }}</span>
+              </li>
+              <li class="nav-item">
+                <form method="post" action="{% url 'logout' %}">
+                  {% csrf_token %}
+                  <button type="submit" class="nav-link btn btn-link"><i class="bi bi-box-arrow-right"></i> Log out</button>
+                </form>
+              </li>
+            {% else %}
+              <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">Home</a></li>
+              <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'login' %}active{% endif %}" href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right"></i> Log in</a></li>
+            {% endif %}
+          {% endblock %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    {% block hero %}{% endblock %}
+    <div class="container">
+      {% block page_header %}{% endblock %}
+      {% block messages %}{% include 'recognition/_messages.html' %}{% endblock %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <div class="busy-overlay" id="busy" role="status" aria-live="polite">
+    <div class="panel">
+      <div class="spinner-border" style="color: var(--brand);"></div>
+      <h5 class="mt-3 mb-1" id="busy-title">Working…</h5>
+      <p class="text-muted mb-0" id="busy-text">Please wait.</p>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="container d-flex flex-wrap justify-content-between">
+      <span>Attendance System Using Face Recognition</span>
+      <span>GITAM (Deemed to be University)</span>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Forms with data-busy-title show a blocking overlay while the server works
+    // (camera capture, training), since those requests take a while.
+    document.querySelectorAll('form[data-busy-title]').forEach(function (form) {
+      form.addEventListener('submit', function () {
+        document.getElementById('busy-title').textContent = form.dataset.busyTitle;
+        document.getElementById('busy-text').textContent = form.dataset.busyText || '';
+        document.getElementById('busy').classList.add('show');
+      });
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

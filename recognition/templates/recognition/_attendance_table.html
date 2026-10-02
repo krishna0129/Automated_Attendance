@@ -1,0 +1,44 @@
+<div class="panel">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="panel-title mb-0">Records</div>
+    <span class="text-muted small">{{ qs|length }} row{{ qs|length|pluralize }}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table table-modern">
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Student</th>
+          <th scope="col">Status</th>
+          <th scope="col">Time in</th>
+          <th scope="col">Time out</th>
+          <th scope="col">Hours</th>
+          <th scope="col">Break hours</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in qs %}
+        <tr>
+          <td>{{ item.date }}</td>
+          <td><strong>{{ item.user.username }}</strong></td>
+          <td>
+            {% if item.present %}<span class="pill pill-present">Present</span>
+            {% else %}<span class="pill pill-absent">Absent</span>{% endif %}
+          </td>
+          <td>{{ item.time_in|time:"g:i A"|default:"–" }}</td>
+          <td>{{ item.time_out|time:"g:i A"|default:"–" }}</td>
+          <td>{{ item.hours }}</td>
+          <td>{{ item.break_hours }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if chart %}
+<div class="panel chart-card">
+  <div class="panel-title">{{ chart_title }}</div>
+  <img src="{{ chart }}" alt="{{ chart_title }}">
+</div>
+{% endif %}
