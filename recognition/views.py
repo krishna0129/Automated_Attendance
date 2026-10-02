@@ -873,7 +873,8 @@ def view_attendance_home(request):
 	emp_present_today=employees_present_today()
 	this_week_emp_count_vs_date()
 	last_week_emp_count_vs_date()
-	return render(request,"recognition/view_attendance_home.html", {'total_num_of_emp' : total_num_of_emp, 'emp_present_today': emp_present_today})
+	emp_absent_today=max(total_num_of_emp-emp_present_today,0)
+	return render(request,"recognition/view_attendance_home.html", {'total_num_of_emp' : total_num_of_emp, 'emp_present_today': emp_present_today, 'emp_absent_today': emp_absent_today})
 
 
 @login_required
