@@ -1,21 +1,57 @@
 {% extends 'recognition/base.html' %}
-{% load static %}
 
-{% block title %}Training{% endblock %}
+{% block title %}Train model{% endblock %}
 
 {% block page_header %}
 <div class="page-header d-flex flex-wrap justify-content-between align-items-end">
   <div>
     <div class="eyebrow">Model</div>
-    <h1>Training results</h1>
-    <p>2-D projection of the face embeddings used to train the classifier. Well-separated clusters mean reliable recognition.</p>
+    <h1>Train the recogniser</h1>
+    <p>Re-train after registering students or adding photos. Photos without a detectable face are removed.</p>
   </div>
   <a class="btn btn-ghost mt-3" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Dashboard</a>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="panel chart-card">
-  <img src="{% static 'recognition/img/training_visualisation.png' %}" alt="Training data visualisation">
+<div class="row">
+  <div class="col-lg-4 mb-4">
+    <div class="panel">
+      <span class="icon-badge amber"><i class="bi bi-cpu"></i></span>
+      <h5 class="mt-3">Start training</h5>
+      <p class="text-muted">Encodes every stored photo and fits a new classifier. This can take a few minutes.</p>
+      <form method="post" data-busy-title="Training in progress" data-busy-text="This may take a few minutes. Please keep this page open.">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-brand btn-block"><i class="bi bi-play-fill"></i> Start training</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    {% if result %}
+      <div class="row">
+        <div class="col-sm-4 mb-4">
+          <div class="stat"><div><div class="label">Students</div><div class="value">{{ result.people|length }}</div></div></div>
+        </div>
+        <div class="col-sm-4 mb-4">
+          <div class="stat"><div><div class="label">Photos used</div><div class="value">{{ result.images_used }}</div></div></div>
+        </div>
+        <div class="col-sm-4 mb-4">
+          <div class="stat"><div><div class="label">Photos removed</div><div class="value">{{ result.images_removed }}</div></div></div>
+        </div>
+      </div>
+      <div class="panel chart-card">
+        <div class="panel-title">Face embeddings</div>
+        <img src="{{ result.visualisation }}" alt="2-D projection of the training face embeddings">
+        <div class="caption">2-D t-SNE projection of each photo's face encoding. Well-separated clusters mean reliable recognition.
+          Trained on {{ result.people|join:", " }} in {{ result.seconds|floatformat:0 }}s.</div>
+      </div>
+    {% else %}
+      <div class="panel text-center text-muted py-5">
+        <i class="bi bi-diagram-3" style="font-size: 2rem;"></i>
+        <p class="mt-2 mb-0">Results appear here after training.</p>
+      </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

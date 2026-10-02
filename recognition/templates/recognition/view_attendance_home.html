@@ -1,5 +1,4 @@
 {% extends 'recognition/base.html' %}
-{% load static %}
 
 {% block title %}Reports{% endblock %}
 
@@ -41,14 +40,14 @@
   <div class="col-lg-6 mb-4">
     <div class="panel chart-card h-100">
       <div class="panel-title">Last week</div>
-      <img src="{% static 'recognition/img/attendance_graphs/last_week/1.png' %}?v={% now 'U' %}" alt="Students present each day last week">
+      <img src="{{ last_week_chart }}" alt="Students present each day last week">
       <div class="caption">Number of students present each day</div>
     </div>
   </div>
   <div class="col-lg-6 mb-4">
     <div class="panel chart-card h-100">
       <div class="panel-title">This week</div>
-      <img src="{% static 'recognition/img/attendance_graphs/this_week/1.png' %}?v={% now 'U' %}" alt="Students present each day this week">
+      <img src="{{ this_week_chart }}" alt="Students present each day this week">
       <div class="caption">Number of students present each day</div>
     </div>
   </div>

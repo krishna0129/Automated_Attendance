@@ -36,7 +36,9 @@
   </div>
 </div>
 
+{% if chart %}
 <div class="panel chart-card">
   <div class="panel-title">{{ chart_title }}</div>
-  <img src="{{ chart_src }}?v={% now 'U' %}" alt="{{ chart_title }}">
+  <img src="{{ chart }}" alt="{{ chart_title }}">
 </div>
+{% endif %}

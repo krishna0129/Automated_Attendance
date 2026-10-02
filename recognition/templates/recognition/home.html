@@ -24,20 +24,26 @@
 {% block content %}
 <div class="row hero-actions">
   <div class="col-md-4 mb-4">
-    <a class="action-card" href="{% url 'mark-your-attendance' %}">
+    <form method="post" action="{% url 'mark-your-attendance' %}" class="h-100" data-busy-title="Camera is open" data-busy-text="Look at the camera window on this computer. Press Q there when everyone is done.">
+      {% csrf_token %}
+      <button type="submit" class="action-card">
       <span class="icon-badge green"><i class="bi bi-box-arrow-in-right"></i></span>
       <h3>Check in</h3>
       <p>Start the camera and mark your arrival for today.</p>
       <span class="go">Mark attendance – In <i class="bi bi-arrow-right"></i></span>
-    </a>
+      </button>
+    </form>
   </div>
   <div class="col-md-4 mb-4">
-    <a class="action-card" href="{% url 'mark-your-attendance-out' %}">
+    <form method="post" action="{% url 'mark-your-attendance-out' %}" class="h-100" data-busy-title="Camera is open" data-busy-text="Look at the camera window on this computer. Press Q there when everyone is done.">
+      {% csrf_token %}
+      <button type="submit" class="action-card">
       <span class="icon-badge red"><i class="bi bi-box-arrow-right"></i></span>
       <h3>Check out</h3>
       <p>Start the camera and mark your departure for today.</p>
       <span class="go">Mark attendance – Out <i class="bi bi-arrow-right"></i></span>
-    </a>
+      </button>
+    </form>
   </div>
   <div class="col-md-4 mb-4">
     <a class="action-card" href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}">

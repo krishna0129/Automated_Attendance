@@ -305,3 +305,16 @@ label { font-weight: 500; font-size: 0.9rem; }
   .app-nav .brand-divider, .app-nav .brand-text { display: none; }
   .panel, .action-card { padding: 1.25rem; }
 }
+
+/* Action cards rendered as <button> inside POST forms. */
+button.action-card {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+button.action-card:focus { outline: none; box-shadow: 0 0 0 0.2rem rgba(140, 29, 47, 0.25); }
+
+/* Logout is a POST form styled like a nav link. */
+.app-nav form .nav-link.btn-link { border: 0; background: none; font-weight: 500; }
+.app-nav form .nav-link.btn-link:hover { background: var(--page); text-decoration: none; }

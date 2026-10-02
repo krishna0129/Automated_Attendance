@@ -1,5 +1,5 @@
 {% extends 'recognition/base.html' %}
-{% load static crispy_forms_tags %}
+{% load crispy_forms_tags %}
 
 {% block title %}Attendance by student{% endblock %}
 
@@ -26,7 +26,6 @@
   </div>
   <div class="col-lg-8 col-xl-9">
     {% if qs %}
-      {% static 'recognition/img/attendance_graphs/hours_vs_date/1.png' as chart_src %}
       {% include 'recognition/_attendance_table.html' with chart_title="Hours attended each day" %}
     {% else %}
       <div class="panel text-center text-muted py-5">
